@@ -1553,7 +1553,7 @@ version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
-name = "web-server-api"
+name = "web-api"
 version = "0.1.0"
 dependencies = [
  "actix-web 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
