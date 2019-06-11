@@ -11,13 +11,15 @@ fn main() -> std::io::Result<()> {
             clap::Arg::with_name("listen-address")
                 .short("l")
                 .takes_value(true)
-                .number_of_values(1),
+                .number_of_values(1)
+                .default_value("0.0.0.0"),
         )
         .arg(
             clap::Arg::with_name("listen-port")
                 .short("p")
                 .takes_value(true)
-                .number_of_values(1),
+                .number_of_values(1)
+                .default_value("5000"),
         )
         .get_matches();
 
