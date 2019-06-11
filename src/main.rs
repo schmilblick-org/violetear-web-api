@@ -7,8 +7,6 @@ fn main() -> std::io::Result<()> {
     std::env::set_var("RUST_LOG", "actix_server=info,actix_web=info");
     env_logger::init();
 
-    let port = env::var("PORT");
-
     let args = clap::App::new("Violetear Web API")
         .arg(
             clap::Arg::with_name("listen-address")
@@ -35,10 +33,10 @@ fn main() -> std::io::Result<()> {
     .bind((
         args.value_of("listen-address")
             .expect("listen-address argument missing"),
-        (&port.unwrap_or(
+        (&env::var("PORT").unwrap_or_else(|_| {
             args.value_of("listen-port")
                 .expect("listen-port argument missing")
-                .to_owned(),
+                .to_owned()}
         ))
             .parse()
             .expect("listen-port argument invalid"),
