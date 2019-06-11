@@ -1,12 +1,6 @@
-image: "rust:1.35"
+image: "rust:latest"
 
-build:
+test:cargo:
   script:
-    - cargo build
-  cache:
-    key: "$CI_COMMIT_REF_SLUG" # Cache is specific to each branch
-    untracked: true # Cache all files untracked by git
-  artifacts:
-    name: "$CI_JOB_NAME-$CI_COMMIT_REF_SLUG"
-    paths:
-      - target/debug/web-api
+    - rustc --version && cargo --version  # Print version info for debugging
+    - cargo test --all --verbose
