@@ -76,9 +76,3 @@ stages:
 include:
   - template: Jobs/Build.gitlab-ci.yml
   - template: Jobs/Deploy.gitlab-ci.yml
-
-# Override DAST job to exclude master branch
-dast:
-  except:
-    refs:
-      - master
