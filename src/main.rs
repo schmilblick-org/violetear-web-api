@@ -46,6 +46,7 @@ fn main() -> std::io::Result<()> {
             .wrap(middleware::Logger::default())
             .service(routes::index)
             .service(routes::register)
+            .service(routes::login)
     })
     .bind((
         args.value_of("listen-address")

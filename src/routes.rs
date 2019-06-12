@@ -58,3 +58,40 @@ fn register(
     }
 }
 
+
+#[derive(Serialize, Deserialize)]
+struct Login {
+    username: String,
+    password: String,
+}
+
+#[derive(Serialize, Deserialize)]
+struct LoginResponse {
+    token: Option<String>,
+}
+
+#[post("/login")]
+fn login(db: web::Data<Pool<SqliteConnectionManager>>, login: web::Json<Login>) -> HttpResponse {
+    let conn = db.get().unwrap();
+
+    match conn.query_row(
+        "SELECT rowid FROM users WHERE username = $1 AND password = $2",
+        &[&login.username, &login.password],
+        |row| row.get::<_, i64>(0),
+    ) {
+        Ok(rowid) => {
+            let token = uuid::Uuid::new_v4().to_simple().to_string().to_lowercase();
+
+            conn.execute(
+                "INSERT INTO tokens (user_id, token) VALUES ($1, $2)",
+                &[&rowid as &ToSql, &token],
+            )
+            .unwrap();
+            HttpResponse::Ok().json(LoginResponse { token: Some(token) })
+        }
+        Err(rusqlite::Error::QueryReturnedNoRows) => {
+            HttpResponse::Unauthorized().json(LoginResponse { token: None })
+        }
+        Err(_) => HttpResponse::InternalServerError().json(LoginResponse { token: None }),
+    }
+}
