@@ -12,10 +12,10 @@ RUN dnf install -y cargo rust sqlite-devel sqlite-libs
 COPY . .
 RUN cargo build --release
 
-FROM alpine
+FROM fedora
 
 # We'll likely need to add SSL root certificates
-RUN apk --no-cache add ca-certificates sqlite-libs
+RUN dnf install -y sqlite-libs
 
 WORKDIR /usr/local/bin
 
