@@ -1,8 +1,8 @@
-FROM alpine AS builder
+FROM fedora AS builder
 
 WORKDIR /usr/src/app
 
-RUN apk --no-cache add sqlite-libs sqlite-dev curl rust cargo
+RUN dnf install -y cargo rust sqlite-devel sqlite-libs
 
 # RUN curl https://sh.rustup.rs -sSf > rustup.sh
 # RUN chmod u+x rustup.sh
