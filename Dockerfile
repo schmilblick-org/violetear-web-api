@@ -23,6 +23,6 @@ COPY --from=builder /usr/src/app/target/release/web-api .
 
 ENV PORT 5000
 
-CMD ["./web-api"]
+CMD ["web-api"]
 
 EXPOSE 5000
