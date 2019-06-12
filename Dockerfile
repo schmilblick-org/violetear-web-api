@@ -2,7 +2,7 @@ FROM alpine AS builder
 
 WORKDIR /usr/src/app
 
-RUN apk --no-cache add sqlite-libs sqlite-dev
+RUN apk --no-cache add sqlite-libs sqlite-dev curl
 
 RUN curl https://sh.rustup.rs -sSf > rustup.sh
 RUN chmod u+x rustup.sh
