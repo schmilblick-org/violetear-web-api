@@ -20,6 +20,9 @@ RUN apk --no-cache add ca-certificates sqlite-libs
 WORKDIR /usr/local/bin
 
 COPY --from=builder /usr/src/app/target/release/web-api .
-CMD ["./web-api -l 0.0.0.0 -p 5000"]
+
+ENV PORT 5000
+
+CMD ["./web-api"]
 
 EXPOSE 5000
