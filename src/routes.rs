@@ -57,3 +57,4 @@ fn register(
         HttpResponse::Ok().json(RegisterResponse { token: Some(token) })
     }
 }
+
