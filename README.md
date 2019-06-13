@@ -2,7 +2,9 @@
 
 # web-api
 
-## Staging endpoint
+### Continuous Delivery
+
+## Staging
 
 https://staging.web-api.violetear.proxmox-1.schmilblick.org/
 
