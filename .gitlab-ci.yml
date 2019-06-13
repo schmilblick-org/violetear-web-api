@@ -11,6 +11,7 @@ variables:
   ROLLOUT_RESOURCE_TYPE: deployment
 
 stages:
+  - pre-build
   - build
   - test
   - deploy  # dummy stage to follow the template guidelines
@@ -26,7 +27,8 @@ stages:
   - performance
   - cleanup
 
-build:
+actual_build:
+  stage: pre-build
   image: $CI_REGISTRY_IMAGE/$CI_COMMIT_REF_SLUG:build
   script:
     - CARGO_HOME="$(pwd)/cargo_home" cargo build --release
@@ -39,7 +41,7 @@ build:
 
 bootstrap:
   image: docker:stable
-  stage: build
+  stage: pre-build
   when: manual
   allow_failure: true
   services:
@@ -49,7 +51,7 @@ bootstrap:
 
 deploy_docker:
   image: docker:stable
-  stage: build
+  stage: pre-build
   when: manual
   allow_failure: true
   services:
