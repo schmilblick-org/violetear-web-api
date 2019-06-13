@@ -38,6 +38,7 @@ build:
       - target/
 
 bootstrap:
+  image: docker:stable
   stage: build
   when: manual
   allow_failure: true
