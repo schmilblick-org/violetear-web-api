@@ -44,7 +44,7 @@ bootstrap:
   services:
     - docker:stable-dind
   script:
-    - ./build_boostrap.sh
+    - ./build_bootstrap.sh
 
 include:
   - template: Jobs/Build.gitlab-ci.yml
