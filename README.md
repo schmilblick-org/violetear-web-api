@@ -4,8 +4,8 @@
 
 ## Staging endpoint
 
-https://schmilblick-violetear-web-api-staging.kubernetes.proxmox-1.schmilblick.org/
+https://staging.web-api.violetear.proxmox-1.schmilblick.org/
 
 ## Production
 
-https://schmilblick-violetear-web-api.kubernetes.proxmox-1.schmilblick.org/
+https://production.web-api.violetear.proxmox-1.schmilblick.org/
