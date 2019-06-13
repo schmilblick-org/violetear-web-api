@@ -1,34 +1,19 @@
 image: alpine:latest
 
 variables:
-  POSTGRES_ENABLED: "false"
-
-  KUBERNETES_VERSION: 1.11.10
-  HELM_VERSION: 2.14.0
-
   DOCKER_DRIVER: overlay2
 
-  ROLLOUT_RESOURCE_TYPE: deployment
-
 stages:
-  - pre-build
+  - bootstrap
+  - binary-build
   - build
   - test
-  - deploy  # dummy stage to follow the template guidelines
-  - review
-  - dast
+  - deploy
   - staging
-  - canary
   - production
-  - incremental rollout 10%
-  - incremental rollout 25%
-  - incremental rollout 50%
-  - incremental rollout 100%
-  - performance
-  - cleanup
 
-actual_build:
-  stage: pre-build
+build:
+  stage: binary-build
   image: $CI_REGISTRY_IMAGE/$CI_COMMIT_REF_SLUG:build
   script:
     - ls -lGha
@@ -40,9 +25,48 @@ actual_build:
       - cargo_home/
       - target/
 
+test:
+  stage: test
+  image: $CI_REGISTRY_IMAGE/$CI_COMMIT_REF_SLUG:build
+  script:
+    - CARGO_HOME="$(pwd)/cargo_home" cargo test --release
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}
+    paths:
+      - cargo_home/
+      - target/
+
+staging:
+  stage: staging
+  image: fedora # Because it has curl
+  script:
+    - |
+      if [[ -z "$CI_COMMIT_TAG" ]]; then
+        export CI_APPLICATION_REPOSITORY=${CI_APPLICATION_REPOSITORY:-$CI_REGISTRY_IMAGE/$CI_COMMIT_REF_SLUG}
+        export CI_APPLICATION_TAG=${CI_APPLICATION_TAG:-$CI_COMMIT_SHA}
+      else
+        export CI_APPLICATION_REPOSITORY=${CI_APPLICATION_REPOSITORY:-$CI_REGISTRY_IMAGE}
+        export CI_APPLICATION_TAG=${CI_APPLICATION_TAG:-$CI_COMMIT_TAG}
+      fi
+    - curl --data "name=staging&port=5000&image=${CI_APPLICATION_REPOSITORY}:${CI_APPLICATION_TAG}&token=${DEPLOY_TOKEN}&" ${DEPLOY_ENDPOINT}
+
+production:
+  stage: production
+  image: fedora # Because it has curl
+  script:
+    - |
+      if [[ -z "$CI_COMMIT_TAG" ]]; then
+        export CI_APPLICATION_REPOSITORY=${CI_APPLICATION_REPOSITORY:-$CI_REGISTRY_IMAGE/$CI_COMMIT_REF_SLUG}
+        export CI_APPLICATION_TAG=${CI_APPLICATION_TAG:-$CI_COMMIT_SHA}
+      else
+        export CI_APPLICATION_REPOSITORY=${CI_APPLICATION_REPOSITORY:-$CI_REGISTRY_IMAGE}
+        export CI_APPLICATION_TAG=${CI_APPLICATION_TAG:-$CI_COMMIT_TAG}
+      fi
+    - curl --data "name=production&port=5001&image=${CI_APPLICATION_REPOSITORY}:${CI_APPLICATION_TAG}&token=${DEPLOY_TOKEN}&" ${DEPLOY_ENDPOINT}
+
 bootstrap:
   image: docker:stable
-  stage: pre-build
+  stage: bootstrap
   when: manual
   allow_failure: true
   services:
@@ -50,9 +74,9 @@ bootstrap:
   script:
     - ./build_bootstrap.sh
 
-deploy_docker:
+create_base_deploy_image:
   image: docker:stable
-  stage: pre-build
+  stage: bootstrap
   when: manual
   allow_failure: true
   services:
@@ -62,4 +86,3 @@ deploy_docker:
 
 include:
   - template: Jobs/Build.gitlab-ci.yml
-  - template: Jobs/Deploy.gitlab-ci.yml
