@@ -30,6 +30,7 @@ build:
   image: $CI_REGISTRY_IMAGE/$CI_COMMIT_REF_SLUG:build
   script:
     - CARGO_HOME="$(pwd)/cargo_home" cargo build --release
+    - sed -i "s#%deploy_image%#$CI_REGISTRY_IMAGE/$CI_COMMIT_REF_SLUG:deploy#" Dockerfile
   cache:
     key: ${CI_COMMIT_REF_SLUG}
     paths:
@@ -45,6 +46,16 @@ bootstrap:
     - docker:stable-dind
   script:
     - ./build_bootstrap.sh
+
+deploy_docker:
+  image: docker:stable
+  stage: build
+  when: manual
+  allow_failure: true
+  services:
+    - docker:stable-dind
+  script:
+    - ./build_deploy.sh
 
 include:
   - template: Jobs/Build.gitlab-ci.yml

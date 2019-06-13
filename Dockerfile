@@ -1,4 +1,4 @@
-FROM debian:stable-slim
+FROM %deploy_image%
 
 WORKDIR /usr/local/bin
 
