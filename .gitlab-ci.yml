@@ -45,6 +45,11 @@ build_docker_image:
   only:
     - branches
     - tags
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}
+    paths:
+      - cargo_home/
+      - target/
 
 test:
   stage: test
