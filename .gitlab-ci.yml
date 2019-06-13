@@ -5,25 +5,46 @@ variables:
 
 stages:
   - bootstrap
-  - binary-build
   - build
   - test
+  - build_docker_image
   - deploy
   - staging
   - production
 
-binary-build:
-  stage: binary-build
+build:
+  stage: build
   image: $CI_REGISTRY_IMAGE/$CI_COMMIT_REF_SLUG:build
   script:
     - ls -lGha
     - CARGO_HOME="$(pwd)/cargo_home" cargo build --release
-    - sed -i "s#%deploy_image%#$CI_REGISTRY_IMAGE/$CI_COMMIT_REF_SLUG:deploy#" Dockerfile
   cache:
     key: ${CI_COMMIT_REF_SLUG}
     paths:
       - cargo_home/
       - target/
+
+build_docker_image:
+  stage: build_docker_image
+  image: "registry.gitlab.com/gitlab-org/cluster-integration/auto-build-image/master:stable"
+  services:
+    - docker:stable-dind
+  script:
+    - |
+      if [[ -z "$CI_COMMIT_TAG" ]]; then
+        export CI_APPLICATION_REPOSITORY=${CI_APPLICATION_REPOSITORY:-$CI_REGISTRY_IMAGE/$CI_COMMIT_REF_SLUG}
+        export CI_APPLICATION_TAG=${CI_APPLICATION_TAG:-$CI_COMMIT_SHA}
+      else
+        export CI_APPLICATION_REPOSITORY=${CI_APPLICATION_REPOSITORY:-$CI_REGISTRY_IMAGE}
+        export CI_APPLICATION_TAG=${CI_APPLICATION_TAG:-$CI_COMMIT_TAG}
+      fi
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
+    - sed -i "s#%deploy_image%#$CI_REGISTRY_IMAGE/$CI_COMMIT_REF_SLUG:deploy#" Dockerfile
+    - docker build --tag "$CI_APPLICATION_REPOSITORY:$CI_APPLICATION_TAG" .
+    - docker push "$CI_APPLICATION_REPOSITORY:$CI_APPLICATION_TAG"
+  only:
+    - branches
+    - tags
 
 test:
   stage: test
@@ -85,6 +106,3 @@ create_base_deploy_image:
     - docker:stable-dind
   script:
     - ./build_deploy.sh
-
-include:
-  - template: Jobs/Build.gitlab-ci.yml
