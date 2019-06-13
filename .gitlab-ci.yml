@@ -31,6 +31,7 @@ actual_build:
   stage: pre-build
   image: $CI_REGISTRY_IMAGE/$CI_COMMIT_REF_SLUG:build
   script:
+    - ls -lGha
     - CARGO_HOME="$(pwd)/cargo_home" cargo build --release
     - sed -i "s#%deploy_image%#$CI_REGISTRY_IMAGE/$CI_COMMIT_REF_SLUG:deploy#" Dockerfile
   cache:
