@@ -29,8 +29,7 @@ stages:
 build:
   image: $CI_REGISTRY_IMAGE/$CI_COMMIT_REF_SLUG:build
   script:
-    - export CARGO_HOME "$(pwd)/cargo_home"
-    - cargo build --release
+    - CARGO_HOME="$(pwd)/cargo_home" cargo build --release
   cache:
     key: ${CI_COMMIT_REF_SLUG}
     paths:
