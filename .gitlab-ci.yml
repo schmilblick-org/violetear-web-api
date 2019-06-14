@@ -65,7 +65,6 @@ test:
 staging:
   stage: staging
   image: fedora # Because it has curl
-  when: manual
   script:
     - |
       if [[ -z "$CI_COMMIT_TAG" ]]; then
@@ -76,11 +75,12 @@ staging:
         export CI_APPLICATION_TAG=${CI_APPLICATION_TAG:-$CI_COMMIT_TAG}
       fi
     - curl --data "name=staging&port=5000&image=${CI_APPLICATION_REPOSITORY}:${CI_APPLICATION_TAG}&token=${DEPLOY_TOKEN}&" ${DEPLOY_ENDPOINT}
+  only:
+    - staging
 
 production:
   stage: production
   image: fedora # Because it has curl
-  when: manual
   script:
     - |
       if [[ -z "$CI_COMMIT_TAG" ]]; then
@@ -91,23 +91,25 @@ production:
         export CI_APPLICATION_TAG=${CI_APPLICATION_TAG:-$CI_COMMIT_TAG}
       fi
     - curl --data "name=production&port=5001&image=${CI_APPLICATION_REPOSITORY}:${CI_APPLICATION_TAG}&token=${DEPLOY_TOKEN}&" ${DEPLOY_ENDPOINT}
+  only:
+    - production
 
 bootstrap:
   image: docker:stable
   stage: bootstrap
-  when: manual
-  allow_failure: true
   services:
     - docker:stable-dind
   script:
     - ./build_bootstrap.sh
+  only:
+    - schedules
 
 create_base_deploy_image:
   image: docker:stable
   stage: bootstrap
-  when: manual
-  allow_failure: true
   services:
     - docker:stable-dind
   script:
     - ./build_deploy.sh
+  only:
+    - schedules
