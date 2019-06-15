@@ -6,8 +6,8 @@
 
 ### Staging
 
-https://staging.web-api.violetear.proxmox-1.schmilblick.org/
+https://staging.web-api.violetear.proxmox-1.schmilblick.org
 
 ### Production
 
-https://production.web-api.violetear.proxmox-1.schmilblick.org/
+https://production.web-api.violetear.proxmox-1.schmilblick.org
