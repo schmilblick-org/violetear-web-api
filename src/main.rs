@@ -1,4 +1,4 @@
-use actix_web::{middleware, App, HttpServer};
+use actix_web::{http::header, middleware, middleware::cors::Cors, App, HttpServer};
 use r2d2_sqlite::SqliteConnectionManager;
 use rusqlite::NO_PARAMS;
 use std::env;
@@ -40,6 +40,19 @@ fn main() -> std::io::Result<()> {
 
     HttpServer::new(move || {
         App::new()
+            .wrap(
+                Cors::new()
+                    .allowed_origin(&env::var("CORS_ORIGIN").unwrap_or_else(|_| "http://[::1]:8000".into()))
+                    .allowed_methods(vec!["GET", "POST"])
+                    .allowed_headers(vec![
+                        header::AUTHORIZATION,
+                        header::ACCEPT,
+                        header::CONTENT_TYPE,
+                        header::ACCEPT_ENCODING,
+                        header::ACCEPT_LANGUAGE,
+                    ])
+                    .max_age(3600),
+            )
             .data(pool.clone())
             .wrap(middleware::DefaultHeaders::new())
             .wrap(middleware::Compress::default())

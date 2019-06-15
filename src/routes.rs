@@ -28,9 +28,9 @@ fn register(
     let conn = db.get().unwrap();
 
     if conn
-        .execute(
-            "SELECT username FROM users WHERE username = $1",
-            &[&register.username],
+        .query_row(
+            "SELECT COUNT(*) username FROM users WHERE username = $1",
+            &[&register.username], |row| row.get::<_, i64>(0)
         )
         .unwrap()
         > 0
