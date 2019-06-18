@@ -1,9 +1,9 @@
 use actix_web::{get, post, web, HttpResponse};
 use r2d2::Pool;
 use r2d2_sqlite::SqliteConnectionManager;
-
 use rusqlite::{ToSql, NO_PARAMS};
 use serde_derive::{Deserialize, Serialize};
+
 #[get("/")]
 fn index() -> &'static str {
     "You have reached a Violetear Web API."
@@ -30,7 +30,8 @@ fn register(
     if conn
         .query_row(
             "SELECT COUNT(*) username FROM users WHERE username = $1",
-            &[&register.username], |row| row.get::<_, i64>(0)
+            &[&register.username],
+            |row| row.get::<_, i64>(0),
         )
         .unwrap()
         > 0
@@ -94,4 +95,20 @@ fn login(db: web::Data<Pool<SqliteConnectionManager>>, login: web::Json<Login>) 
         }
         Err(_) => HttpResponse::InternalServerError().json(LoginResponse { token: None }),
     }
+}
+
+#[derive(Serialize, Deserialize)]
+struct Logout {
+    token: String,
+}
+
+#[derive(Serialize, Deserialize)]
+struct LogoutResponse {}
+
+#[post("/logout")]
+fn logout(db: web::Data<Pool<SqliteConnectionManager>>, logout: web::Json<Logout>) -> HttpResponse {
+    let conn = db.get().unwrap();
+    conn.execute("DELETE FROM tokens WHERE token = $1", &[&logout.token])
+        .unwrap();
+    HttpResponse::Ok().json(LogoutResponse {})
 }

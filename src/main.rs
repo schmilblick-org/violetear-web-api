@@ -61,6 +61,7 @@ fn main() -> std::io::Result<()> {
             .service(routes::index)
             .service(routes::register)
             .service(routes::login)
+            .service(routes::logout)
     })
     .bind((
         args.value_of("listen-address")
