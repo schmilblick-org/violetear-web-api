@@ -1,7 +1,8 @@
-use actix_web::{http::header, middleware, middleware::cors::Cors, App, HttpServer};
+use actix_web::{http::header, middleware, App, HttpServer};
 use r2d2_sqlite::SqliteConnectionManager;
 use rusqlite::NO_PARAMS;
 use std::env;
+use actix_cors::Cors;
 
 mod routes;
 
