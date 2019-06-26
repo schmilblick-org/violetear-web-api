@@ -16,6 +16,7 @@ serde_json = "1.0"
 serde_derive = "1.0"
 serde = "1.0"
 uuid = { version = "0.7", features = ["v4"] }
+bcrypt = "0.4"
 
 [patch.crates-io]
 ring = { git = 'https://github.com/leo-lb/ring', branch = "ppc64le" }

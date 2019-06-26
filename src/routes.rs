@@ -3,6 +3,7 @@ use r2d2::Pool;
 use r2d2_sqlite::SqliteConnectionManager;
 use rusqlite::{ToSql, NO_PARAMS};
 use serde_derive::{Deserialize, Serialize};
+use bcrypt::{DEFAULT_COST, hash, verify};
 
 #[get("/")]
 fn index() -> &'static str {
@@ -42,7 +43,10 @@ fn register(
         conn.execute("BEGIN", NO_PARAMS).unwrap();
         conn.execute(
             "INSERT INTO users (username, password) VALUES ($1, $2)",
-            &[&register.username, &register.password],
+            &[
+                &register.username,
+                &hash(&register.password, DEFAULT_COST).unwrap(),
+            ],
         )
         .unwrap();
 
@@ -76,11 +80,15 @@ fn login(db: web::Data<Pool<SqliteConnectionManager>>, login: web::Json<Login>) 
     let conn = db.get().unwrap();
 
     match conn.query_row(
-        "SELECT rowid FROM users WHERE username = $1 AND password = $2",
-        &[&login.username, &login.password],
-        |row| row.get::<_, i64>(0),
+        "SELECT rowid,password FROM users WHERE username = $1",
+        &[&login.username],
+        |row| match (row.get::<_, i64>(0), row.get::<_, String>(1)) {
+            (Err(x), _) => Err(x),
+            (_, Err(x)) => Err(x),
+            (Ok(x), Ok(y)) => Ok((x, y)),
+        },
     ) {
-        Ok(rowid) => {
+        Ok((rowid, ref hashed)) if verify(&login.password, &hashed).unwrap() => {
             let token = uuid::Uuid::new_v4().to_simple().to_string().to_lowercase();
 
             conn.execute(
@@ -93,7 +101,7 @@ fn login(db: web::Data<Pool<SqliteConnectionManager>>, login: web::Json<Login>) 
         Err(rusqlite::Error::QueryReturnedNoRows) => {
             HttpResponse::Unauthorized().json(LoginResponse { token: None })
         }
-        Err(_) => HttpResponse::InternalServerError().json(LoginResponse { token: None }),
+        Err(_) | Ok(_) => HttpResponse::InternalServerError().json(LoginResponse { token: None }),
     }
 }
 

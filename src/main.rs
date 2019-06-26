@@ -43,7 +43,9 @@ fn main() -> std::io::Result<()> {
         App::new()
             .wrap(
                 Cors::new()
-                    .allowed_origin(&env::var("CORS_ORIGIN").unwrap_or_else(|_| "http://[::1]:8000".into()))
+                    .allowed_origin(
+                        &env::var("CORS_ORIGIN").unwrap_or_else(|_| "http://[::1]:8000".into()),
+                    )
                     .allowed_methods(vec!["GET", "POST"])
                     .allowed_headers(vec![
                         header::AUTHORIZATION,
