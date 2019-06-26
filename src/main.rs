@@ -32,12 +32,12 @@ fn main() -> std::io::Result<()> {
     let conn = pool.get().unwrap();
 
     conn.execute(
-        "CREATE TABLE IF NOT EXISTS users (username TEXT, password TEXT, rank INTEGER)",
+        "CREATE TABLE IF NOT EXISTS users (username TEXT UNIQUE, password TEXT, rank INTEGER)",
         NO_PARAMS,
     )
     .unwrap();
 
-    conn.execute("CREATE TABLE IF NOT EXISTS tokens (user_id INTEGER, token TEXT, created_when DATETIME DEFAULT CURRENT_TIMESTAMP)", NO_PARAMS).unwrap();
+    conn.execute("CREATE TABLE IF NOT EXISTS tokens (user_id INTEGER, token TEXT UNIQUE, created_when DATETIME DEFAULT CURRENT_TIMESTAMP)", NO_PARAMS).unwrap();
 
     HttpServer::new(move || {
         App::new()
