@@ -2,6 +2,7 @@ image: alpine:latest
 
 variables:
   DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: ''
   STAGING_ORIGIN: "https://staging.web-client.violetear.proxmox-1.schmilblick.org"
   PRODUCTION_ORIGIN: "https://production.web-client.violetear.proxmox-1.schmilblick.org"
 
