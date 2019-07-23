@@ -104,20 +104,20 @@ production:
     - production
 
 bootstrap:
-  image: docker:latest
+  image: docker:stable
   stage: bootstrap
   services:
-    - docker:dind
+    - docker:stable-dind
   script:
     - ./build_bootstrap.sh
   only:
     - schedules
 
 create_base_deploy_image:
-  image: docker:latest
+  image: docker:stable
   stage: bootstrap
   services:
-    - docker:dind
+    - docker:stable-dind
   script:
     - ./build_deploy.sh
   only:
