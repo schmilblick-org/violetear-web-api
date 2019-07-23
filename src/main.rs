@@ -1,14 +1,25 @@
-use actix_web::{http::header, middleware, App, HttpServer};
-use r2d2_sqlite::SqliteConnectionManager;
-use rusqlite::NO_PARAMS;
-use std::env;
+#[macro_use]
+extern crate diesel;
+
 use actix_cors::Cors;
+use actix_web::{http::header, middleware, App, HttpServer};
+
+use diesel::pg::PgConnection;
+use diesel::r2d2::{self, ConnectionManager};
+use diesel::prelude::*;
+use dotenv::dotenv;
+use std::env;
 
 mod routes;
+
+mod models;
+mod schema;
 
 fn main() -> std::io::Result<()> {
     std::env::set_var("RUST_LOG", "actix_server=info,actix_web=info");
     env_logger::init();
+
+    dotenv().ok();
 
     let args = clap::App::new("Violetear Web API")
         .arg(
@@ -26,18 +37,11 @@ fn main() -> std::io::Result<()> {
         )
         .get_matches();
 
-    let manager = SqliteConnectionManager::file("web-api.db");
+    let manager = ConnectionManager::<PgConnection>::new(
+        env::var("DATABASE_URL").expect("incomplete database configuration")
+    );
+    
     let pool = r2d2::Pool::new(manager).unwrap();
-
-    let conn = pool.get().unwrap();
-
-    conn.execute(
-        "CREATE TABLE IF NOT EXISTS users (username TEXT UNIQUE, password TEXT, rank INTEGER)",
-        NO_PARAMS,
-    )
-    .unwrap();
-
-    conn.execute("CREATE TABLE IF NOT EXISTS tokens (user_id INTEGER, token TEXT UNIQUE, created_when DATETIME DEFAULT CURRENT_TIMESTAMP)", NO_PARAMS).unwrap();
 
     HttpServer::new(move || {
         App::new()
@@ -60,10 +64,10 @@ fn main() -> std::io::Result<()> {
             .wrap(middleware::DefaultHeaders::new())
             .wrap(middleware::Compress::default())
             .wrap(middleware::Logger::default())
-            .service(routes::index)
-            .service(routes::register)
-            .service(routes::login)
-            .service(routes::logout)
+        /* .service(routes::index)
+        .service(routes::register)
+        .service(routes::login)
+        .service(routes::logout)*/
     })
     .bind((
         args.value_of("listen-address")

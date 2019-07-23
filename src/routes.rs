@@ -1,13 +1,15 @@
-use actix_web::{get, post, web, HttpResponse};
-use r2d2::Pool;
-use r2d2_sqlite::SqliteConnectionManager;
+use actix_web::{get, post, web, Error as AWError, HttpResponse};
+use bcrypt::{hash, verify, DEFAULT_COST};
+use diesel::r2d2::{self, ConnectionManager, Pool};
+use diesel::PgConnection;
+use futures::{future::ok, Future};
 use rusqlite::{ToSql, NO_PARAMS};
 use serde_derive::{Deserialize, Serialize};
-use bcrypt::{DEFAULT_COST, hash, verify};
 
-#[get("/")]
-fn index() -> &'static str {
-    "You have reached a Violetear Web API."
+use crate::models;
+
+fn index() -> impl Future<Item = HttpResponse, Error = AWError> {
+    ok(HttpResponse::Ok().body("You have reached a Violetear Web API."))
 }
 
 #[derive(Serialize, Deserialize)]
@@ -21,48 +23,20 @@ struct RegisterResponse {
     token: Option<String>,
 }
 
-#[post("/register")]
 fn register(
-    db: web::Data<Pool<SqliteConnectionManager>>,
+    db: web::Data<Pool<ConnectionManager<PgConnection>>>,
     register: web::Json<Register>,
-) -> HttpResponse {
-    let conn = db.get().unwrap();
+) -> impl Future<Item = HttpResponse, Error = AWError> {
+    web::block(move || {
+        let conn = &db.get().unwrap();
 
-    if conn
-        .query_row(
-            "SELECT COUNT(*) username FROM users WHERE username = $1",
-            &[&register.username],
-            |row| row.get::<_, i64>(0),
-        )
-        .unwrap()
-        > 0
-    {
-        HttpResponse::Conflict().json(RegisterResponse { token: None })
-    } else {
+        let user_id = models::User::create(conn, &register.username, &register.password, 0)?;
+        let token = models::Token::generate(conn, user_id)?;
 
-        conn.execute("BEGIN", NO_PARAMS).unwrap();
-        conn.execute(
-            "INSERT INTO users (username, password) VALUES ($1, $2)",
-            &[
-                &register.username,
-                &hash(&register.password, DEFAULT_COST).unwrap(),
-            ],
-        )
-        .unwrap();
-
-        let token = uuid::Uuid::new_v4().to_simple().to_string().to_lowercase();
-
-        conn.execute(
-            "INSERT INTO tokens (user_id, token) VALUES ($1, $2)",
-            &[&conn.last_insert_rowid() as &ToSql, &token],
-        )
-        .unwrap();
-        conn.execute("COMMIT", NO_PARAMS).unwrap();
-
-        HttpResponse::Ok().json(RegisterResponse { token: Some(token) })
-    }
+        Ok(token)
+    }).map(|token| HttpResponse::Ok().json(RegisterResponse { token: Some(token)})
+    ).map_err(|_| HttpResponse::Conflict().json(RegisterResponse { token: None }))
 }
-
 
 #[derive(Serialize, Deserialize)]
 struct Login {
@@ -74,8 +48,7 @@ struct Login {
 struct LoginResponse {
     token: Option<String>,
 }
-
-#[post("/login")]
+/*
 fn login(db: web::Data<Pool<SqliteConnectionManager>>, login: web::Json<Login>) -> HttpResponse {
     let conn = db.get().unwrap();
 
@@ -120,3 +93,4 @@ fn logout(db: web::Data<Pool<SqliteConnectionManager>>, logout: web::Json<Logout
         .unwrap();
     HttpResponse::Ok().json(LogoutResponse {})
 }
+*/
