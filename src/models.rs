@@ -31,17 +31,12 @@ impl User {
         Ok(verify(&user.hashed_password, &hashed_password).unwrap())
     }
 
-    pub fn rank_for_username(
-        conn: &PgConnection,
-        username: &String,
-    ) -> Result<i32, diesel::result::Error> {
+    pub fn by_username(conn: &PgConnection, username: &String) -> Result<Self, diesel::result::Error> {
         use crate::schema::users::dsl;
 
-        let user = dsl::users
+        dsl::users
             .filter(dsl::username.eq(username))
-            .get_result::<Self>(conn)?;
-
-        Ok(user.rank)
+            .get_result::<Self>(conn)
     }
 
     pub fn create(
@@ -83,6 +78,15 @@ impl Token {
             .execute(conn)?;
 
         Ok(token)
+    }
+
+    pub fn destroy(conn: &PgConnection, token: &String) -> Result<(), diesel::result::Error> {
+        use crate::schema::tokens::dsl;
+
+        diesel::delete(dsl::tokens)
+            .filter(dsl::token.eq(token))
+            .execute(conn)
+            .map(|_| ())
     }
 
     pub fn user_by_token(

@@ -13,7 +13,7 @@ fn index() -> impl Future<Item = HttpResponse, Error = AWError> {
 }
 
 #[derive(Serialize, Deserialize)]
-struct Register {
+pub struct Register {
     username: String,
     password: String,
 }
@@ -23,7 +23,7 @@ struct RegisterResponse {
     token: Option<String>,
 }
 
-fn register(
+pub fn register(
     db: web::Data<Pool<ConnectionManager<PgConnection>>>,
     register: web::Json<Register>,
 ) -> impl Future<Item = HttpResponse, Error = AWError> {
@@ -44,7 +44,7 @@ fn register(
 }
 
 #[derive(Serialize, Deserialize)]
-struct Login {
+pub struct Login {
     username: String,
     password: String,
 }
@@ -53,49 +53,36 @@ struct Login {
 struct LoginResponse {
     token: Option<String>,
 }
-/*
-fn login(db: web::Data<Pool<SqliteConnectionManager>>, login: web::Json<Login>) -> HttpResponse {
-    let conn = db.get().unwrap();
 
-    match conn.query_row(
-        "SELECT rowid,password FROM users WHERE username = $1",
-        &[&login.username],
-        |row| match (row.get::<_, i64>(0), row.get::<_, String>(1)) {
-            (Err(x), _) => Err(x),
-            (_, Err(x)) => Err(x),
-            (Ok(x), Ok(y)) => Ok((x, y)),
-        },
-    ) {
-        Ok((rowid, ref hashed)) if verify(&login.password, &hashed).unwrap() => {
-            let token = uuid::Uuid::new_v4().to_simple().to_string().to_lowercase();
+pub fn login(
+    db: web::Data<Pool<ConnectionManager<PgConnection>>>,
+    login: web::Json<Login>,
+) -> impl Future<Item = HttpResponse, Error = AWError> {
+    web::block(move || {
+        let conn = &db.get().unwrap();
 
-            conn.execute(
-                "INSERT INTO tokens (user_id, token) VALUES ($1, $2)",
-                &[&rowid as &ToSql, &token],
-            )
-            .unwrap();
-            HttpResponse::Ok().json(LoginResponse { token: Some(token) })
-        }
-        Err(rusqlite::Error::QueryReturnedNoRows) => {
-            HttpResponse::Unauthorized().json(LoginResponse { token: None })
-        }
-        Err(_) | Ok(_) => HttpResponse::InternalServerError().json(LoginResponse { token: None }),
-    }
+        let is_valid = models::User::verify_password(conn, &login.username, &login.password)?;
+        let user = models::User::by_username(conn, &login.username)?;
+
+        models::Token::generate(conn, user.id)
+    })
+    .map(|token| HttpResponse::Ok().json(LoginResponse { token: Some(token) }))
+    .or_else(|_| HttpResponse::Unauthorized().json(LoginResponse { token: None }))
 }
 
 #[derive(Serialize, Deserialize)]
-struct Logout {
+pub struct Logout {
     token: String,
 }
 
 #[derive(Serialize, Deserialize)]
 struct LogoutResponse {}
 
-#[post("/logout")]
-fn logout(db: web::Data<Pool<SqliteConnectionManager>>, logout: web::Json<Logout>) -> HttpResponse {
-    let conn = db.get().unwrap();
-    conn.execute("DELETE FROM tokens WHERE token = $1", &[&logout.token])
-        .unwrap();
-    HttpResponse::Ok().json(LogoutResponse {})
+pub fn logout(
+    db: web::Data<Pool<ConnectionManager<PgConnection>>>,
+    logout: web::Json<Logout>,
+) -> impl Future<Item = HttpResponse, Error = AWError> {
+    web::block(move || models::Token::destroy(&db.get().unwrap(), &logout.token))
+        .map(|_| HttpResponse::Ok().json(LogoutResponse {}))
+        .or_else(|_| HttpResponse::Ok().json(LogoutResponse {}))
 }
-*/

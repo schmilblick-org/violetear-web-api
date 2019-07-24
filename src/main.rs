@@ -2,11 +2,11 @@
 extern crate diesel;
 
 use actix_cors::Cors;
-use actix_web::{http::header, middleware, App, HttpServer};
+use actix_web::{http::header, middleware, web, App, HttpServer};
 
 use diesel::pg::PgConnection;
-use diesel::r2d2::{self, ConnectionManager};
 use diesel::prelude::*;
+use diesel::r2d2::{self, ConnectionManager};
 use dotenv::dotenv;
 use std::env;
 
@@ -38,9 +38,9 @@ fn main() -> std::io::Result<()> {
         .get_matches();
 
     let manager = ConnectionManager::<PgConnection>::new(
-        env::var("DATABASE_URL").expect("incomplete database configuration")
+        env::var("DATABASE_URL").expect("incomplete database configuration"),
     );
-    
+
     let pool = r2d2::Pool::new(manager).unwrap();
 
     HttpServer::new(move || {
@@ -64,10 +64,21 @@ fn main() -> std::io::Result<()> {
             .wrap(middleware::DefaultHeaders::new())
             .wrap(middleware::Compress::default())
             .wrap(middleware::Logger::default())
-        /* .service(routes::index)
-        .service(routes::register)
-        .service(routes::login)
-        .service(routes::logout)*/
+            .service(
+                web::resource("/login")
+                    .data(web::JsonConfig::default().limit(4096))
+                    .route(web::post().to_async(routes::login)),
+            )
+            .service(
+                web::resource("/register")
+                    .data(web::JsonConfig::default().limit(4096))
+                    .route(web::post().to_async(routes::register)),
+            )
+            .service(
+                web::resource("/logout")
+                    .data(web::JsonConfig::default().limit(4096))
+                    .route(web::post().to_async(routes::logout)),
+            )
     })
     .bind((
         args.value_of("listen-address")
