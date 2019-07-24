@@ -34,8 +34,13 @@ fn register(
         let token = models::Token::generate(conn, user_id)?;
 
         Ok(token)
-    }).map(|token| HttpResponse::Ok().json(RegisterResponse { token: Some(token)})
-    ).map_err(|_| HttpResponse::Conflict().json(RegisterResponse { token: None }))
+    })
+    .map(|token| HttpResponse::Ok().json(RegisterResponse { token: Some(token) }))
+    .or_else(
+        |_: actix_web::error::BlockingError<diesel::result::Error>| {
+            HttpResponse::Conflict().json(RegisterResponse { token: None })
+        },
+    )
 }
 
 #[derive(Serialize, Deserialize)]
