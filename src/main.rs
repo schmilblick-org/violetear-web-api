@@ -66,19 +66,22 @@ fn main() -> std::io::Result<()> {
             .wrap(middleware::Logger::default())
             .service(web::resource("/").route(web::get().to_async(routes::index)))
             .service(
-                web::resource("/login")
-                    .data(web::JsonConfig::default().limit(4096))
-                    .route(web::post().to_async(routes::login)),
-            )
-            .service(
-                web::resource("/register")
-                    .data(web::JsonConfig::default().limit(4096))
-                    .route(web::post().to_async(routes::register)),
-            )
-            .service(
-                web::resource("/logout")
-                    .data(web::JsonConfig::default().limit(4096))
-                    .route(web::post().to_async(routes::logout)),
+                web::scope("/v1")
+                    .service(
+                        web::resource("/login")
+                            .data(web::JsonConfig::default().limit(4096))
+                            .route(web::post().to_async(routes::login)),
+                    )
+                    .service(
+                        web::resource("/register")
+                            .data(web::JsonConfig::default().limit(4096))
+                            .route(web::post().to_async(routes::register)),
+                    )
+                    .service(
+                        web::resource("/logout")
+                            .data(web::JsonConfig::default().limit(4096))
+                            .route(web::post().to_async(routes::logout)),
+                    ),
             )
     })
     .bind((
