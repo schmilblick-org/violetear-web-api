@@ -8,7 +8,7 @@ use serde_derive::{Deserialize, Serialize};
 
 use crate::models;
 
-fn index() -> impl Future<Item = HttpResponse, Error = AWError> {
+pub fn index() -> impl Future<Item = HttpResponse, Error = AWError> {
     ok(HttpResponse::Ok().body("You have reached a Violetear Web API."))
 }
 

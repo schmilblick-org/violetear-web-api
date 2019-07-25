@@ -64,6 +64,7 @@ fn main() -> std::io::Result<()> {
             .wrap(middleware::DefaultHeaders::new())
             .wrap(middleware::Compress::default())
             .wrap(middleware::Logger::default())
+            .service(web::resource("/").route(web::get().to_async(routes::index)))
             .service(
                 web::resource("/login")
                     .data(web::JsonConfig::default().limit(4096))
