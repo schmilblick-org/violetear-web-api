@@ -12,8 +12,6 @@ stages:
   - test
   - build_docker_image
   - deploy
-  - staging
-  - production
 
 build:
   stage: build
@@ -73,7 +71,7 @@ test:
     - build
 
 staging:
-  stage: staging
+  stage: deploy
   image: fedora # Because it has curl
   script:
     - |
@@ -84,12 +82,15 @@ staging:
         export CI_APPLICATION_REPOSITORY=${CI_APPLICATION_REPOSITORY:-$CI_REGISTRY_IMAGE}
         export CI_APPLICATION_TAG=${CI_APPLICATION_TAG:-$CI_COMMIT_TAG}
       fi
-    - curl --data "name=staging&port=5000&image=${CI_APPLICATION_REPOSITORY}:${CI_APPLICATION_TAG}&token=${DEPLOY_TOKEN}&CORS_ORIGIN=${STAGING_ORIGIN}&" ${DEPLOY_ENDPOINT}
+    - curl --data "name=staging&port=5000&image=${CI_APPLICATION_REPOSITORY}:${CI_APPLICATION_TAG}&token=${DEPLOY_TOKEN}&CORS_ORIGIN=${STAGING_ORIGIN}&DATABASE_URL=${DATABASE_URL}&" ${DEPLOY_ENDPOINT}
   only:
     - staging
+  environment:
+    name: staging
+    url: https://staging.web-api.violetear.proxmox-1.schmilblick.org
 
 production:
-  stage: production
+  stage: deploy
   image: fedora # Because it has curl
   script:
     - |
@@ -100,9 +101,12 @@ production:
         export CI_APPLICATION_REPOSITORY=${CI_APPLICATION_REPOSITORY:-$CI_REGISTRY_IMAGE}
         export CI_APPLICATION_TAG=${CI_APPLICATION_TAG:-$CI_COMMIT_TAG}
       fi
-    - curl --data "name=production&port=5001&image=${CI_APPLICATION_REPOSITORY}:${CI_APPLICATION_TAG}&token=${DEPLOY_TOKEN}&CORS_ORIGIN=${PRODUCTION_ORIGIN}&" ${DEPLOY_ENDPOINT}
+    - curl --data "name=production&port=5001&image=${CI_APPLICATION_REPOSITORY}:${CI_APPLICATION_TAG}&token=${DEPLOY_TOKEN}&CORS_ORIGIN=${PRODUCTION_ORIGIN}&DATABASE_URL=${DATABASE_URL}&" ${DEPLOY_ENDPOINT}
   only:
     - production
+  environment:
+    name: production
+    url: https://production.web-api.violetear.proxmox-1.schmilblick.org
 
 bootstrap:
   image: docker:stable

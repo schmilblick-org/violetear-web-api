@@ -1,3 +1,5 @@
-FROM debian:stable-slim
+FROM rust:slim-buster
 
-RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get -y install ca-certificates libsqlite3-0 libpq5
+RUN apt-get update && \
+DEBIAN_FRONTEND=noninteractive apt-get -y install cargo rustc ca-certificates libpq-dev libpq5 && \
+cargo install --force diesel_cli --no-default-features --features "postgres"

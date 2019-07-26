@@ -6,6 +6,6 @@ COPY target/release/web-api .
 
 ENV PORT 5000
 
-CMD ["web-api"]
+CMD ["diesel setup && diesel migration run && web-api"]
 
 EXPOSE 5000
