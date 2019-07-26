@@ -3,7 +3,6 @@ use bcrypt::{hash, verify, DEFAULT_COST};
 use diesel::r2d2::{self, ConnectionManager, Pool};
 use diesel::PgConnection;
 use futures::{future::ok, Future};
-use rusqlite::{ToSql, NO_PARAMS};
 use serde_derive::{Deserialize, Serialize};
 
 use crate::models;
