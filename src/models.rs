@@ -24,9 +24,7 @@ impl User {
             .filter(dsl::username.eq(username))
             .get_result::<Self>(conn)?;
 
-        let hashed_password = hash(password, DEFAULT_COST).unwrap();
-
-        Ok(verify(&user.hashed_password, &hashed_password).unwrap())
+        Ok(verify(password, &user.hashed_password).unwrap())
     }
 
     pub fn by_username(
@@ -94,11 +92,10 @@ impl Token {
         conn: &PgConnection,
         token: &String,
     ) -> Result<User, diesel::result::Error> {
-        use crate::schema::tokens;
-        use crate::schema::users;
+        use crate::schema::tokens::dsl;
 
-        let token = tokens::dsl::tokens
-            .filter(tokens::dsl::token.eq(token))
+        let token = dsl::tokens
+            .filter(dsl::token.eq(token))
             .get_result::<Self>(conn)?;
 
         Ok(users::dsl::users
