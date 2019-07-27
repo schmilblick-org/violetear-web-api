@@ -5,7 +5,6 @@ use actix_cors::Cors;
 use actix_web::{http::header, middleware, web, App, HttpServer};
 
 use diesel::pg::PgConnection;
-use diesel::prelude::*;
 use diesel::r2d2::{self, ConnectionManager};
 use dotenv::dotenv;
 use std::env;
