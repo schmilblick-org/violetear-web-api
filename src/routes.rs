@@ -1,4 +1,4 @@
-use actix_web::{web, Error as AWError, HttpResponse};
+use actix_web::{http::header, web, Either, Error as AWError, HttpRequest, HttpResponse};
 
 use diesel::r2d2::{ConnectionManager, Pool};
 use diesel::PgConnection;
@@ -83,19 +83,37 @@ pub fn login(
     )
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct Logout {
-    token: String,
-}
-
-#[derive(Serialize, Deserialize)]
-struct LogoutResponse {}
-
 pub fn logout(
+    req: HttpRequest,
     db: web::Data<Pool<ConnectionManager<PgConnection>>>,
-    logout: web::Json<Logout>,
-) -> impl Future<Item = HttpResponse, Error = AWError> {
-    web::block(move || models::Token::destroy(&db.get().unwrap(), &logout.token))
-        .map(|_| HttpResponse::Ok().json(LogoutResponse {}))
-        .or_else(|_| HttpResponse::InternalServerError().json(LogoutResponse {}))
+) -> Either<Box<dyn Future<Item = HttpResponse, Error = AWError>>, HttpResponse> {
+    if let Some(token) = &req.headers().get(header::AUTHORIZATION) {
+        let token = token.to_str().unwrap().to_string();
+
+        Either::A(Box::new(
+            web::block(move || {
+                if models::Token::user_by_token(&db.get().unwrap(), &token).is_ok() {
+                    models::Token::destroy(&db.get().unwrap(), &token)?;
+
+                    Ok(true)
+                } else {
+                    Ok(false)
+                }
+            })
+            .map(|is_authenticated| {
+                if is_authenticated {
+                    HttpResponse::Ok().finish()
+                } else {
+                    HttpResponse::Unauthorized().finish()
+                }
+            })
+            .or_else(
+                |_: actix_web::error::BlockingError<diesel::result::Error>| {
+                    HttpResponse::InternalServerError().finish()
+                },
+            ),
+        ))
+    } else {
+        Either::B(HttpResponse::Unauthorized().finish())
+    }
 }
