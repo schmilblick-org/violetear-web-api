@@ -94,11 +94,10 @@ impl Token {
         conn: &PgConnection,
         token: &String,
     ) -> Result<User, diesel::result::Error> {
-        use crate::schema::tokens;
-        use crate::schema::users;
+        use crate::schema::tokens::dsl;
 
-        let token = tokens::dsl::tokens
-            .filter(tokens::dsl::token.eq(token))
+        let token = dsl::tokens
+            .filter(dsl::token.eq(token))
             .get_result::<Self>(conn)?;
 
         Ok(users::dsl::users
