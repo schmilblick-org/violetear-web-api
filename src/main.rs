@@ -79,7 +79,7 @@ fn main() -> std::io::Result<()> {
                     .service(
                         web::resource("/logout")
                             .data(web::JsonConfig::default().limit(4096))
-                            .route(web::post().to_async(routes::logout)),
+                            .route(web::post().to(routes::logout)),
                     ),
             )
     })

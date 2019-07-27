@@ -1,0 +1,9 @@
+-- Your SQL goes here
+CREATE TABLE tasks (
+    id BIGSERIAL PRIMARY KEY,
+    report_id BIGSERIAL NOT NULL,
+    profile_id BIGSERIAL NOT NULL,
+    created_when TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    completed_when TIMESTAMP WITH TIME ZONE,
+    status INTEGER NOT NULL
+)
