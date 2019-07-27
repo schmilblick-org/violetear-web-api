@@ -1,6 +1,6 @@
-use actix_web::{get, post, web, Error as AWError, HttpResponse};
-use bcrypt::{hash, verify, DEFAULT_COST};
-use diesel::r2d2::{self, ConnectionManager, Pool};
+use actix_web::{web, Error as AWError, HttpResponse};
+
+use diesel::r2d2::{ConnectionManager, Pool};
 use diesel::PgConnection;
 use futures::{future::ok, Future};
 use serde_derive::{Deserialize, Serialize};
@@ -61,12 +61,26 @@ pub fn login(
         let conn = &db.get().unwrap();
 
         let is_valid = models::User::verify_password(conn, &login.username, &login.password)?;
-        let user = models::User::by_username(conn, &login.username)?;
+        if is_valid {
+            let user = models::User::by_username(conn, &login.username)?;
 
-        models::Token::generate(conn, user.id)
+            Ok((models::Token::generate(conn, user.id)?, is_valid))
+        } else {
+            Ok(("".into(), is_valid))
+        }
     })
-    .map(|token| HttpResponse::Ok().json(LoginResponse { token: Some(token) }))
-    .or_else(|_| HttpResponse::Unauthorized().json(LoginResponse { token: None }))
+    .map(|(token, is_valid)| {
+        if is_valid {
+            HttpResponse::Ok().json(LoginResponse { token: Some(token) })
+        } else {
+            HttpResponse::Unauthorized().json(LoginResponse { token: None })
+        }
+    })
+    .or_else(
+        |_: actix_web::error::BlockingError<diesel::result::Error>| {
+            HttpResponse::InternalServerError().json(LoginResponse { token: None })
+        },
+    )
 }
 
 #[derive(Serialize, Deserialize)]
