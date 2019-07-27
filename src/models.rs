@@ -1,9 +1,7 @@
 use bcrypt::{hash, verify, DEFAULT_COST};
 use chrono::prelude::*;
 use diesel::prelude::*;
-use std::error::Error;
 
-use crate::schema::tokens;
 use crate::schema::users;
 
 #[derive(Queryable, Identifiable)]
@@ -31,7 +29,10 @@ impl User {
         Ok(verify(&user.hashed_password, &hashed_password).unwrap())
     }
 
-    pub fn by_username(conn: &PgConnection, username: &String) -> Result<Self, diesel::result::Error> {
+    pub fn by_username(
+        conn: &PgConnection,
+        username: &String,
+    ) -> Result<Self, diesel::result::Error> {
         use crate::schema::users::dsl;
 
         dsl::users
