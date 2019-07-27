@@ -97,5 +97,5 @@ pub fn logout(
 ) -> impl Future<Item = HttpResponse, Error = AWError> {
     web::block(move || models::Token::destroy(&db.get().unwrap(), &logout.token))
         .map(|_| HttpResponse::Ok().json(LogoutResponse {}))
-        .or_else(|_| HttpResponse::Ok().json(LogoutResponse {}))
+        .or_else(|_| HttpResponse::InternalServerError().json(LogoutResponse {}))
 }
