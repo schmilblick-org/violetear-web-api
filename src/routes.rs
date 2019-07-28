@@ -1,8 +1,8 @@
-use actix_web::{http::header, web, Either, Error as AWError, HttpRequest, HttpResponse};
+use actix_web::{http::header, web, Error as AWError, HttpRequest, HttpResponse};
 
 use diesel::r2d2::{ConnectionManager, Pool};
 use diesel::PgConnection;
-use futures::{future::ok, Future};
+use futures::{future::ok, future::Either, Future};
 use serde_derive::{Deserialize, Serialize};
 
 use crate::models;
@@ -86,11 +86,11 @@ pub fn login(
 pub fn logout(
     req: HttpRequest,
     db: web::Data<Pool<ConnectionManager<PgConnection>>>,
-) -> Either<Box<dyn Future<Item = HttpResponse, Error = AWError>>, HttpResponse> {
+) -> impl Future<Item = HttpResponse, Error = AWError> {
     if let Some(token) = &req.headers().get(header::AUTHORIZATION) {
         let token = token.to_str().unwrap().to_string();
 
-        Either::A(Box::new(
+        Either::A(
             web::block(move || {
                 if models::Token::user_by_token(&db.get().unwrap(), &token).is_ok() {
                     models::Token::destroy(&db.get().unwrap(), &token)?;
@@ -112,8 +112,8 @@ pub fn logout(
                     HttpResponse::InternalServerError().finish()
                 },
             ),
-        ))
+        )
     } else {
-        Either::B(HttpResponse::Unauthorized().finish())
+        Either::B(ok(HttpResponse::Unauthorized().finish()))
     }
 }
