@@ -1,4 +1,25 @@
 table! {
+    reports (id) {
+        id -> Int8,
+        user_id -> Int8,
+        created_when -> Timestamptz,
+        file_multihash -> Text,
+        file -> Nullable<Bytea>,
+    }
+}
+
+table! {
+    tasks (id) {
+        id -> Int8,
+        report_id -> Int8,
+        profile_id -> Int8,
+        created_when -> Timestamptz,
+        completed_when -> Nullable<Timestamptz>,
+        status -> Text,
+    }
+}
+
+table! {
     tokens (id) {
         id -> Int8,
         user_id -> Int8,
@@ -16,7 +37,27 @@ table! {
     }
 }
 
+table! {
+    worker_capabilities (id) {
+        id -> Int8,
+        worker_id -> Int8,
+        kind -> Text,
+        value -> Text,
+    }
+}
+
+table! {
+    workers (id) {
+        id -> Int8,
+        last_active -> Timestamptz,
+    }
+}
+
 allow_tables_to_appear_in_same_query!(
+    reports,
+    tasks,
     tokens,
     users,
+    worker_capabilities,
+    workers,
 );
