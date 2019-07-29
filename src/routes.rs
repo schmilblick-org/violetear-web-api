@@ -1,7 +1,7 @@
 use actix_web::{http::header, web, Error as AWError, HttpRequest, HttpResponse};
 
 use diesel::r2d2::{ConnectionManager, Pool};
-use diesel::PgConnection;
+use diesel::{Connection, PgConnection};
 use futures::{future::ok, future::Either, Future};
 use serde_derive::{Deserialize, Serialize};
 
@@ -29,10 +29,12 @@ pub fn register(
     web::block(move || {
         let conn = &db.get().unwrap();
 
-        let user_id = models::User::create(conn, &register.username, &register.password, 0)?;
-        let token = models::Token::generate(conn, user_id)?;
+        conn.transaction(|| {
+            let user_id = models::User::create(conn, &register.username, &register.password, 0)?;
+            let token = models::Token::generate(conn, user_id)?;
 
-        Ok(token)
+            Ok(token)
+        })
     })
     .map(|token| HttpResponse::Ok().json(RegisterResponse { token: Some(token) }))
     .or_else(
@@ -60,14 +62,16 @@ pub fn login(
     web::block(move || {
         let conn = &db.get().unwrap();
 
-        let is_valid = models::User::verify_password(conn, &login.username, &login.password)?;
-        if is_valid {
-            let user = models::User::by_username(conn, &login.username)?;
+        conn.transaction(|| {
+            let is_valid = models::User::verify_password(conn, &login.username, &login.password)?;
+            if is_valid {
+                let user = models::User::by_username(conn, &login.username)?;
 
-            Ok((models::Token::generate(conn, user.id)?, is_valid))
-        } else {
-            Ok(("".into(), is_valid))
-        }
+                Ok((models::Token::generate(conn, user.id)?, is_valid))
+            } else {
+                Ok(("".into(), is_valid))
+            }
+        })
     })
     .map(|(token, is_valid)| {
         if is_valid {
@@ -92,13 +96,16 @@ pub fn logout(
 
         Either::A(
             web::block(move || {
-                if models::Token::user_by_token(&db.get().unwrap(), &token).is_ok() {
-                    models::Token::destroy(&db.get().unwrap(), &token)?;
+                let conn = &db.get().unwrap();
 
-                    Ok(true)
-                } else {
-                    Ok(false)
-                }
+                conn.transaction(|| {
+                    if models::Token::user_by_token(conn, &token).is_ok() {
+                        models::Token::destroy(conn, &token)?;
+                        Ok(true)
+                    } else {
+                        Ok(false)
+                    }
+                })
             })
             .map(|is_authenticated| {
                 if is_authenticated {
