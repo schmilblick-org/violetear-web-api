@@ -2,9 +2,7 @@ use bcrypt::{hash, verify, DEFAULT_COST};
 use chrono::prelude::*;
 use diesel::prelude::*;
 
-use crate::schema::users;
-
-#[derive(Queryable, Identifiable)]
+#[derive(Queryable)]
 pub struct User {
     pub id: i64,
     pub username: String,
@@ -15,8 +13,8 @@ pub struct User {
 impl User {
     pub fn verify_password(
         conn: &PgConnection,
-        username: &String,
-        password: &String,
+        username: &str,
+        password: &str,
     ) -> Result<bool, diesel::result::Error> {
         use crate::schema::users::dsl;
 
@@ -27,10 +25,7 @@ impl User {
         Ok(verify(password, &user.hashed_password).unwrap())
     }
 
-    pub fn by_username(
-        conn: &PgConnection,
-        username: &String,
-    ) -> Result<Self, diesel::result::Error> {
+    pub fn by_username(conn: &PgConnection, username: &str) -> Result<Self, diesel::result::Error> {
         use crate::schema::users::dsl;
 
         dsl::users
@@ -40,8 +35,8 @@ impl User {
 
     pub fn create(
         conn: &PgConnection,
-        username: &String,
-        password: &String,
+        username: &str,
+        password: &str,
         rank: i32,
     ) -> Result<i64, diesel::result::Error> {
         use crate::schema::users::dsl;
@@ -79,7 +74,7 @@ impl Token {
         Ok(token)
     }
 
-    pub fn destroy(conn: &PgConnection, token: &String) -> Result<(), diesel::result::Error> {
+    pub fn destroy(conn: &PgConnection, token: &str) -> Result<(), diesel::result::Error> {
         use crate::schema::tokens::dsl;
 
         diesel::delete(dsl::tokens)
@@ -88,11 +83,9 @@ impl Token {
             .map(|_| ())
     }
 
-    pub fn user_by_token(
-        conn: &PgConnection,
-        token: &String,
-    ) -> Result<User, diesel::result::Error> {
+    pub fn user_by_token(conn: &PgConnection, token: &str) -> Result<User, diesel::result::Error> {
         use crate::schema::tokens::dsl;
+        use crate::schema::users;
 
         let token = dsl::tokens
             .filter(dsl::token.eq(token))
@@ -101,5 +94,24 @@ impl Token {
         Ok(users::dsl::users
             .find(token.user_id)
             .get_result::<User>(conn)?)
+    }
+}
+
+#[derive(Queryable)]
+pub struct Profile {
+    pub id: i64,
+    pub machine_name: String,
+    pub human_name: String,
+    pub module: String,
+    pub config: Option<serde_json::Value>,
+}
+
+impl Profile {
+    pub fn list(conn: &PgConnection) -> Result<Vec<Self>, diesel::result::Error> {
+        use crate::schema::profiles::dsl;
+
+        let profiles = dsl::profiles.get_results::<Self>(conn)?;
+
+        Ok(profiles)
     }
 }
