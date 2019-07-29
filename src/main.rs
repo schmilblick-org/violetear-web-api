@@ -9,7 +9,9 @@ use diesel::r2d2::{self, ConnectionManager};
 use dotenv::dotenv;
 use std::env;
 
+mod auth;
 mod routes;
+mod tasks;
 
 mod models;
 mod schema;
@@ -65,22 +67,24 @@ fn main() -> std::io::Result<()> {
             .wrap(middleware::Logger::default())
             .service(web::resource("/").route(web::get().to_async(routes::index)))
             .service(
-                web::scope("/v1")
-                    .service(
-                        web::resource("/login")
-                            .data(web::JsonConfig::default().limit(4096))
-                            .route(web::post().to_async(routes::login)),
-                    )
-                    .service(
-                        web::resource("/register")
-                            .data(web::JsonConfig::default().limit(4096))
-                            .route(web::post().to_async(routes::register)),
-                    )
-                    .service(
-                        web::resource("/logout")
-                            .data(web::JsonConfig::default().limit(4096))
-                            .route(web::post().to_async(routes::logout)),
-                    ),
+                web::scope("/v1").service(
+                    web::scope("/auth")
+                        .service(
+                            web::resource("/login")
+                                .data(web::JsonConfig::default().limit(4096))
+                                .route(web::post().to_async(auth::login)),
+                        )
+                        .service(
+                            web::resource("/register")
+                                .data(web::JsonConfig::default().limit(4096))
+                                .route(web::post().to_async(auth::register)),
+                        )
+                        .service(
+                            web::resource("/logout")
+                                .data(web::JsonConfig::default().limit(4096))
+                                .route(web::post().to_async(auth::logout)),
+                        ),
+                ),
             )
     })
     .bind((
