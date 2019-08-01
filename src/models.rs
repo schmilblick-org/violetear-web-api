@@ -1,6 +1,7 @@
 use bcrypt::{hash, verify, DEFAULT_COST};
 use chrono::prelude::*;
 use diesel::prelude::*;
+use serde::{Deserialize, Serialize};
 
 #[derive(Queryable)]
 pub struct User {
@@ -69,16 +70,14 @@ impl Token {
 
         diesel::insert_into(dsl::tokens)
             .values((dsl::user_id.eq(user_id), dsl::token.eq(&token)))
-            .execute(conn)?;
-
-        Ok(token)
+            .returning(dsl::token)
+            .get_result(conn)
     }
 
     pub fn destroy(conn: &PgConnection, token: &str) -> Result<(), diesel::result::Error> {
         use crate::schema::tokens::dsl;
 
-        diesel::delete(dsl::tokens)
-            .filter(dsl::token.eq(token))
+        diesel::delete(dsl::tokens.filter(dsl::token.eq(token)))
             .execute(conn)
             .map(|_| ())
     }
@@ -97,7 +96,7 @@ impl Token {
     }
 }
 
-#[derive(Queryable)]
+#[derive(Queryable, Serialize, Deserialize)]
 pub struct Profile {
     pub id: i64,
     pub machine_name: String,
@@ -110,8 +109,106 @@ impl Profile {
     pub fn list(conn: &PgConnection) -> Result<Vec<Self>, diesel::result::Error> {
         use crate::schema::profiles::dsl;
 
-        let profiles = dsl::profiles.get_results::<Self>(conn)?;
+        dsl::profiles.get_results::<Self>(conn)
+    }
+}
 
-        Ok(profiles)
+use crate::schema::reports;
+
+#[derive(Identifiable, Queryable, Serialize, Deserialize)]
+pub struct Report {
+    pub id: i64,
+    pub user_id: i64,
+    pub created_when: chrono::DateTime<Utc>,
+    pub file_multihash: String,
+    pub file: Option<Vec<u8>>,
+}
+
+impl Report {
+    pub fn list_for_user(
+        conn: &PgConnection,
+        user_id: i64,
+    ) -> Result<Vec<Self>, diesel::result::Error> {
+        use crate::schema::reports::dsl;
+
+        dsl::reports
+            .filter(dsl::user_id.eq(user_id))
+            .get_results::<Self>(conn)
+    }
+
+    pub fn create(
+        conn: &PgConnection,
+        user_id: i64,
+        file: Vec<u8>,
+    ) -> Result<i64, diesel::result::Error> {
+        use crate::schema::reports::dsl;
+        use multihash::{encode, Hash};
+
+        diesel::insert_into(dsl::reports)
+            .values((
+                dsl::user_id.eq(user_id),
+                dsl::file_multihash.eq(hex::encode(encode(Hash::SHA2256, &file).unwrap())),
+                dsl::file.eq(Some(file)),
+            ))
+            .returning(dsl::id)
+            .get_result(conn)
+    }
+
+    pub fn discard_file_check_user(
+        conn: &PgConnection,
+        user_id: i64,
+        report_id: i64,
+    ) -> Result<(), diesel::result::Error> {
+        use crate::schema::reports::dsl;
+
+        diesel::update(
+            dsl::reports
+                .find(report_id)
+                .filter(dsl::user_id.eq(user_id)),
+        )
+        .set(dsl::file.eq::<Option<Vec<u8>>>(None))
+        .execute(conn)
+        .map(|_| ())
+    }
+}
+
+use crate::schema::tasks;
+
+#[derive(Queryable, Identifiable, Serialize, Deserialize)]
+pub struct Task {
+    id: i64,
+    report_id: i64,
+    profile_id: i64,
+    created_when: chrono::DateTime<Utc>,
+    completed_when: Option<chrono::DateTime<Utc>>,
+    status: String,
+}
+
+impl Task {
+    pub fn list_for_report(
+        conn: &PgConnection,
+        report_id: i64,
+    ) -> Result<Vec<Self>, diesel::result::Error> {
+        use crate::schema::tasks::dsl;
+
+        dsl::tasks
+            .filter(dsl::report_id.eq(report_id))
+            .get_results::<Self>(conn)
+    }
+
+    pub fn create(
+        conn: &PgConnection,
+        report_id: i64,
+        profile_id: i64,
+    ) -> Result<i64, diesel::result::Error> {
+        use crate::schema::tasks::dsl;
+        diesel::insert_into(dsl::tasks)
+            .values((
+                dsl::report_id.eq(report_id),
+                dsl::profile_id.eq(profile_id),
+                dsl::status.eq("new"),
+            ))
+            .returning(dsl::id)
+            .get_result(conn)
     }
 }
