@@ -1,8 +1,13 @@
 use actix_web::{http::header, web, Error as AWError, HttpRequest, HttpResponse};
 
-use diesel::r2d2::{ConnectionManager, Pool};
-use diesel::{Connection, PgConnection};
-use futures::{future::ok, future::Either, Future};
+use diesel::{
+    r2d2::{ConnectionManager, Pool},
+    Connection, PgConnection,
+};
+use futures::{
+    future::{ok, Either},
+    Future,
+};
 use serde_derive::{Deserialize, Serialize};
 
 use crate::models;
