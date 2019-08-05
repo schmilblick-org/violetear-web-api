@@ -62,6 +62,9 @@ table! {
     }
 }
 
+joinable!(tasks -> reports (id));
+joinable!(worker_capabilities -> workers (id));
+
 allow_tables_to_appear_in_same_query!(
     profiles,
     reports,

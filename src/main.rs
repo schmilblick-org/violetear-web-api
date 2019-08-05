@@ -6,7 +6,7 @@ extern crate quick_error;
 use std::env;
 
 use actix_cors::Cors;
-use actix_web::{App, http::header, HttpServer, middleware, web};
+use actix_web::{http::header, middleware, web, App, HttpServer};
 use diesel::{
     pg::PgConnection,
     r2d2::{self, ConnectionManager},

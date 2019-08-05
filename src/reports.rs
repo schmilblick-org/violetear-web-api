@@ -1,13 +1,16 @@
-use actix_web::{Error as AWError, http::header, HttpRequest, HttpResponse, web};
 use actix_web::error::PayloadError;
 use actix_web::web::Payload;
+use actix_web::{http::header, web, Error as AWError, HttpRequest, HttpResponse};
 use bytes::{Bytes, BytesMut};
-use diesel::{Connection, PgConnection, r2d2::{ConnectionManager, Pool}};
-use futures::{
-    future::{Either, ok},
-    Future, Stream,
+use diesel::{
+    r2d2::{ConnectionManager, Pool},
+    Connection, PgConnection,
 };
 use futures::stream::Fold;
+use futures::{
+    future::{ok, Either},
+    Future, Stream,
+};
 use serde::{Deserialize, Serialize};
 
 use crate::models;
@@ -58,7 +61,7 @@ pub fn create(
     query: web::Query<CreateQuery>,
     payload: web::Payload,
     db: web::Data<Pool<ConnectionManager<PgConnection>>>,
-) -> impl Future<Item=HttpResponse, Error=AWError> {
+) -> impl Future<Item = HttpResponse, Error = AWError> {
     if let Some(token) = req.headers().get(header::AUTHORIZATION) {
         let token = token.to_str().unwrap().to_string();
 
@@ -68,53 +71,53 @@ pub fn create(
 
                 Ok((db, user))
             })
-                .and_then(|(db, user)| {
-                    payload
-                        .fold(
-                            bytes::BytesMut::new(),
-                            |mut body, chunk| -> Result<_, PayloadError> {
-                                if body.len() + chunk.len() > MAX_SIZE {
-                                    Err(PayloadError::Overflow)
-                                } else {
-                                    body.extend_from_slice(&chunk);
-                                    Ok(body)
-                                }
-                            },
-                        )
-                        .and_then(|body| {
-                            web::block(move || {
-                                let conn = &db.get().unwrap();
+            .and_then(|(db, user)| {
+                payload
+                    .fold(
+                        bytes::BytesMut::new(),
+                        |mut body, chunk| -> Result<_, PayloadError> {
+                            if body.len() + chunk.len() > MAX_SIZE {
+                                Err(PayloadError::Overflow)
+                            } else {
+                                body.extend_from_slice(&chunk);
+                                Ok(body)
+                            }
+                        },
+                    )
+                    .and_then(|body| {
+                        web::block(move || {
+                            let conn = &db.get().unwrap();
 
-                                conn.transaction(|| -> Result<_, diesel::result::Error>{
+                            conn.transaction(|| -> Result<_, diesel::result::Error> {
                                 let report_id =
                                     models::Report::create(conn, user.id, body.to_vec())?;
 
-                                    for profile_id in query.profiles.iter() {
-                                        models::Task::create(conn, report_id, *profile_id)?;
+                                for profile_id in query.profiles.iter() {
+                                    models::Task::create(conn, report_id, *profile_id)?;
                                 }
 
                                 Ok(report_id)
                             })
-                            })
-                                .and_then(|report_id| {
-                                    Ok(HttpResponse::Ok().json(CreateResponse { report_id }))
-                                })
-                                .or_else(
-                                    |_: actix_web::error::BlockingError<diesel::result::Error>| {
-                                        Ok(HttpResponse::InternalServerError().finish())
-                                    },
-                                )
                         })
-                        .or_else(|_| Ok(HttpResponse::InternalServerError().finish()))
-                })
-                .or_else(
-                    |e: actix_web::error::BlockingError<diesel::result::Error>| match e {
-                        actix_web::error::BlockingError::Error(diesel::result::Error::NotFound) => {
-                            Ok(HttpResponse::Unauthorized().finish())
-                        }
-                        _ => Ok(HttpResponse::InternalServerError().finish()),
-                    },
-                ),
+                        .and_then(|report_id| {
+                            Ok(HttpResponse::Ok().json(CreateResponse { report_id }))
+                        })
+                        .or_else(
+                            |_: actix_web::error::BlockingError<diesel::result::Error>| {
+                                Ok(HttpResponse::InternalServerError().finish())
+                            },
+                        )
+                    })
+                    .or_else(|_| Ok(HttpResponse::InternalServerError().finish()))
+            })
+            .or_else(
+                |e: actix_web::error::BlockingError<diesel::result::Error>| match e {
+                    actix_web::error::BlockingError::Error(diesel::result::Error::NotFound) => {
+                        Ok(HttpResponse::Unauthorized().finish())
+                    }
+                    _ => Ok(HttpResponse::InternalServerError().finish()),
+                },
+            ),
         )
     } else {
         Either::B(ok(HttpResponse::Unauthorized().finish()))

@@ -1,10 +1,10 @@
-use actix_web::{Error as AWError, http::header, HttpRequest, HttpResponse, web};
+use actix_web::{http::header, web, Error as AWError, HttpRequest, HttpResponse};
 use diesel::{
-    Connection,
-    PgConnection, r2d2::{ConnectionManager, Pool},
+    r2d2::{ConnectionManager, Pool},
+    Connection, PgConnection,
 };
 use futures::{
-    future::{Either, ok},
+    future::{ok, Either},
     Future,
 };
 use serde_derive::{Deserialize, Serialize};
@@ -36,7 +36,7 @@ pub fn register(
             Ok(token)
         })
     })
-        .and_then(|token| Ok(HttpResponse::Ok().json(RegisterResponse { token: Some(token) })))
+    .and_then(|token| Ok(HttpResponse::Ok().json(RegisterResponse { token: Some(token) })))
     .or_else(
         |_: actix_web::error::BlockingError<diesel::result::Error>| {
             Ok(HttpResponse::Conflict().finish())
@@ -80,12 +80,14 @@ pub fn login(
             HttpResponse::Unauthorized().finish()
         }
     })
-        .or_else(|e: actix_web::error::BlockingError<diesel::result::Error>| {
-            match e {
-                actix_web::error::BlockingError::Error(diesel::result::Error::NotFound) => Ok(HttpResponse::Unauthorized().finish()),
-                _ => Ok(HttpResponse::InternalServerError().finish())
+    .or_else(
+        |e: actix_web::error::BlockingError<diesel::result::Error>| match e {
+            actix_web::error::BlockingError::Error(diesel::result::Error::NotFound) => {
+                Ok(HttpResponse::Unauthorized().finish())
             }
-        })
+            _ => Ok(HttpResponse::InternalServerError().finish()),
+        },
+    )
 }
 
 pub fn logout(
@@ -108,7 +110,7 @@ pub fn logout(
                     }
                 })
             })
-                .and_then(|is_authenticated| {
+            .and_then(|is_authenticated| {
                 if is_authenticated {
                     Ok(HttpResponse::Ok().finish())
                 } else {
