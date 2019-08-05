@@ -2,10 +2,7 @@ use actix_web::{Error as AWError, http::header, HttpRequest, HttpResponse, web};
 use actix_web::error::PayloadError;
 use actix_web::web::Payload;
 use bytes::{Bytes, BytesMut};
-use diesel::{
-    PgConnection,
-    r2d2::{ConnectionManager, Pool},
-};
+use diesel::{Connection, PgConnection, r2d2::{ConnectionManager, Pool}};
 use futures::{
     future::{Either, ok},
     Future, Stream,
@@ -73,25 +70,40 @@ pub fn create(
             })
                 .and_then(|(db, user)| {
                     payload
-                        .fold(bytes::BytesMut::new(), |mut body, chunk| {
-                            body.extend_from_slice(&chunk);
-                            Ok(body)
-                        })
+                        .fold(
+                            bytes::BytesMut::new(),
+                            |mut body, chunk| -> Result<_, PayloadError> {
+                                if body.len() + chunk.len() > MAX_SIZE {
+                                    Err(PayloadError::Overflow)
+                                } else {
+                                    body.extend_from_slice(&chunk);
+                                    Ok(body)
+                                }
+                            },
+                        )
                         .and_then(|body| {
                             web::block(move || {
-                                let report_id =
-                                    models::Report::create(&db.get().unwrap(), user.id, body.to_vec())?;
+                                let conn = &db.get().unwrap();
 
-                                for profile_id in query.profiles {
-                                    models::Task::create(&db.get().unwrap(), report_id, profile_id)?;
+                                conn.transaction(|| -> Result<_, diesel::result::Error>{
+                                let report_id =
+                                    models::Report::create(conn, user.id, body.to_vec())?;
+
+                                    for profile_id in query.profiles.iter() {
+                                        models::Task::create(conn, report_id, *profile_id)?;
                                 }
 
                                 Ok(report_id)
                             })
+                            })
                                 .and_then(|report_id| {
                                     Ok(HttpResponse::Ok().json(CreateResponse { report_id }))
                                 })
-                                .or_else(|_| Ok(HttpResponse::InternalServerError().finish()))
+                                .or_else(
+                                    |_: actix_web::error::BlockingError<diesel::result::Error>| {
+                                        Ok(HttpResponse::InternalServerError().finish())
+                                    },
+                                )
                         })
                         .or_else(|_| Ok(HttpResponse::InternalServerError().finish()))
                 })

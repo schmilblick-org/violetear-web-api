@@ -98,7 +98,11 @@ fn main() -> std::io::Result<()> {
                     )
                     .service(
                         web::scope("/reports")
-                            .service(web::resource("").route(web::get().to_async(reports::list))),
+                            .service(web::resource("").route(web::get().to_async(reports::list)))
+                            .service(
+                                web::resource("/create")
+                                    .route(web::post().to_async(reports::create)),
+                            ),
                     ),
             )
     })
