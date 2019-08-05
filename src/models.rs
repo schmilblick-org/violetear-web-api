@@ -111,6 +111,19 @@ impl Profile {
 
         dsl::profiles.get_results::<Self>(conn)
     }
+
+    pub fn id_for_machine_name(
+        conn: &PgConnection,
+        machine_name: &str,
+    ) -> Result<i64, diesel::result::Error> {
+        use crate::schema::profiles::dsl;
+
+        let profile = dsl::profiles
+            .filter(dsl::machine_name.eq(machine_name))
+            .get_result::<Profile>(conn)?;
+
+        Ok(profile.id)
+    }
 }
 
 use crate::schema::reports;

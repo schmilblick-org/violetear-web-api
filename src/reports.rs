@@ -1,12 +1,12 @@
 use actix_web::error::PayloadError;
-use actix_web::web::Payload;
+
 use actix_web::{http::header, web, Error as AWError, HttpRequest, HttpResponse};
-use bytes::{Bytes, BytesMut};
+use bytes::BytesMut;
 use diesel::{
     r2d2::{ConnectionManager, Pool},
     Connection, PgConnection,
 };
-use futures::stream::Fold;
+
 use futures::{
     future::{ok, Either},
     Future, Stream,
@@ -46,7 +46,7 @@ pub fn list(
 
 #[derive(Deserialize)]
 pub struct CreateQuery {
-    profiles: Vec<i64>,
+    profiles: String,
 }
 
 const MAX_SIZE: usize = 104_857_600;
@@ -74,7 +74,7 @@ pub fn create(
             .and_then(|(db, user)| {
                 payload
                     .fold(
-                        bytes::BytesMut::new(),
+                        BytesMut::new(),
                         |mut body, chunk| -> Result<_, PayloadError> {
                             if body.len() + chunk.len() > MAX_SIZE {
                                 Err(PayloadError::Overflow)
@@ -92,8 +92,18 @@ pub fn create(
                                 let report_id =
                                     models::Report::create(conn, user.id, body.to_vec())?;
 
-                                for profile_id in query.profiles.iter() {
-                                    models::Task::create(conn, report_id, *profile_id)?;
+                                let mut profile_names: Vec<&str> =
+                                    query.profiles.split(',').collect();
+
+                                profile_names.dedup();
+
+                                for profile_machine_name in profile_names {
+                                    let profile_id = models::Profile::id_for_machine_name(
+                                        conn,
+                                        profile_machine_name,
+                                    )?;
+
+                                    models::Task::create(conn, report_id, profile_id)?;
                                 }
 
                                 Ok(report_id)
@@ -103,7 +113,7 @@ pub fn create(
                             Ok(HttpResponse::Ok().json(CreateResponse { report_id }))
                         })
                         .or_else(
-                            |_: actix_web::error::BlockingError<diesel::result::Error>| {
+                            |e: actix_web::error::BlockingError<diesel::result::Error>| {
                                 Ok(HttpResponse::InternalServerError().finish())
                             },
                         )
@@ -123,28 +133,3 @@ pub fn create(
         Either::B(ok(HttpResponse::Unauthorized().finish()))
     }
 }
-
-/*
-pub fn create(
-    req: HttpRequest,
-    query: web::Query<CreateQuery>,
-    payload: web::Payload,
-    db: web::Data<Pool<ConnectionManager<PgConnection>>>,
-) -> Result<HttpResponse, AWError> {
-    if let Some(token) = req.headers().get(header::AUTHORIZATION) {
-        let user = match models::Token::user_by_token(&db.get().unwrap(), token.to_str().unwrap()) {
-            Ok(user) => user,
-            Err(diesel::result::Error::NotFound) => {
-                return Ok(HttpResponse::Unauthorized().finish())
-            }
-            Err(_) => return Ok(HttpResponse::InternalServerError().finish()),
-        };
-
-        models::Report::create(&db.get().unwrap(), user.id, )
-
-        Ok(HttpResponse::Ok().finish())
-    } else {
-        Ok(HttpResponse::Unauthorized().finish())
-    }
-}
-*/
