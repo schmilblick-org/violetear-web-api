@@ -3,27 +3,24 @@ extern crate diesel;
 #[macro_use]
 extern crate quick_error;
 
-use actix_cors::Cors;
-use actix_web::{http::header, middleware, web, App, HttpServer};
+use std::env;
 
+use actix_cors::Cors;
+use actix_web::{App, http::header, HttpServer, middleware, web};
 use diesel::{
     pg::PgConnection,
     r2d2::{self, ConnectionManager},
 };
+
 use dotenv::dotenv;
-use std::env;
 
 mod auth;
 mod profiles;
 mod reports;
 mod routes;
-mod tasks;
-mod utils;
 
 mod models;
 mod schema;
-
-mod error;
 
 fn main() -> std::io::Result<()> {
     std::env::set_var("RUST_LOG", "actix_server=info,actix_web=info");
