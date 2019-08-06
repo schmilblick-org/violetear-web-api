@@ -92,17 +92,12 @@ fn main() -> std::io::Result<()> {
                                     .route(web::post().to_async(auth::logout)),
                             ),
                     )
-                    .service(
-                        web::scope("/profiles")
-                            .service(web::resource("").route(web::get().to_async(profiles::list))),
-                    )
+                    .service(web::scope("/profiles").route("", web::get().to_async(profiles::list)))
                     .service(
                         web::scope("/reports")
-                            .service(web::resource("").route(web::get().to_async(reports::list)))
-                            .service(
-                                web::resource("/create")
-                                    .route(web::post().to_async(reports::create)),
-                            ),
+                            .route("", web::get().to_async(reports::list))
+                            .route("/{report_id}", web::get().to_async(reports::by_id))
+                            .route("/create", web::post().to_async(reports::create)),
                     ),
             )
     })

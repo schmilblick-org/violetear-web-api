@@ -183,6 +183,19 @@ impl Report {
         .execute(conn)
         .map(|_| ())
     }
+
+    pub fn by_id_check_user(
+        conn: &PgConnection,
+        report_id: i64,
+        user_id: i64,
+    ) -> Result<Self, diesel::result::Error> {
+        use crate::schema::reports::dsl;
+
+        dsl::reports
+            .find(report_id)
+            .filter(dsl::user_id.eq(user_id))
+            .get_result::<Self>(conn)
+    }
 }
 
 use crate::schema::tasks;

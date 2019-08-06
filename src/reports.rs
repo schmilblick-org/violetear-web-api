@@ -133,3 +133,50 @@ pub fn create(
         Either::B(ok(HttpResponse::Unauthorized().finish()))
     }
 }
+
+#[derive(Deserialize)]
+pub struct ByIdPath {
+    pub report_id: i64,
+}
+
+pub fn by_id(
+    req: HttpRequest,
+    path: web::Path<ByIdPath>,
+    db: web::Data<Pool<ConnectionManager<PgConnection>>>,
+) -> impl Future<Item = HttpResponse, Error = AWError> {
+    if let Some(token) = req.headers().get(header::AUTHORIZATION) {
+        let token = token.to_str().unwrap().to_string();
+
+        Either::A(
+            web::block(move || {
+                let user = models::Token::user_by_token(&db.get().unwrap(), &token)?;
+
+                Ok((db, user))
+            })
+            .and_then(|(db, user)| {
+                web::block(move || {
+                    models::Report::by_id_check_user(&db.get().unwrap(), path.report_id, user.id)
+                })
+                .and_then(|report| Ok(HttpResponse::Ok().json(report)))
+                .or_else(
+                    |e: actix_web::error::BlockingError<diesel::result::Error>| match e {
+                        actix_web::error::BlockingError::Error(diesel::result::Error::NotFound) => {
+                            Ok(HttpResponse::NotFound().finish())
+                        }
+                        _ => Ok(HttpResponse::InternalServerError().finish()),
+                    },
+                )
+            })
+            .or_else(
+                |e: actix_web::error::BlockingError<diesel::result::Error>| match e {
+                    actix_web::error::BlockingError::Error(diesel::result::Error::NotFound) => {
+                        Ok(HttpResponse::Unauthorized().finish())
+                    }
+                    _ => Ok(HttpResponse::InternalServerError().finish()),
+                },
+            ),
+        )
+    } else {
+        Either::B(ok(HttpResponse::Unauthorized().finish()))
+    }
+}
