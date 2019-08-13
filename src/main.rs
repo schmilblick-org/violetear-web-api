@@ -1,15 +1,24 @@
 #[macro_use]
 extern crate diesel;
+#[macro_use]
+extern crate quick_error;
+
+use std::env;
 
 use actix_cors::Cors;
 use actix_web::{http::header, middleware, web, App, HttpServer};
+use diesel::{
+    pg::PgConnection,
+    r2d2::{self, ConnectionManager},
+};
 
-use diesel::pg::PgConnection;
-use diesel::r2d2::{self, ConnectionManager};
 use dotenv::dotenv;
-use std::env;
 
+mod auth;
+mod profiles;
+mod reports;
 mod routes;
+mod tasks;
 
 mod models;
 mod schema;
@@ -67,19 +76,30 @@ fn main() -> std::io::Result<()> {
             .service(
                 web::scope("/v1")
                     .service(
-                        web::resource("/login")
-                            .data(web::JsonConfig::default().limit(4096))
-                            .route(web::post().to_async(routes::login)),
+                        web::scope("/auth")
+                            .service(
+                                web::resource("/login")
+                                    .data(web::JsonConfig::default().limit(4096))
+                                    .route(web::post().to_async(auth::login)),
+                            )
+                            .service(
+                                web::resource("/register")
+                                    .data(web::JsonConfig::default().limit(4096))
+                                    .route(web::post().to_async(auth::register)),
+                            )
+                            .service(
+                                web::resource("/logout")
+                                    .data(web::JsonConfig::default().limit(4096))
+                                    .route(web::post().to_async(auth::logout)),
+                            ),
                     )
+                    .service(web::scope("/profiles").route("", web::get().to_async(profiles::list)))
                     .service(
-                        web::resource("/register")
-                            .data(web::JsonConfig::default().limit(4096))
-                            .route(web::post().to_async(routes::register)),
-                    )
-                    .service(
-                        web::resource("/logout")
-                            .data(web::JsonConfig::default().limit(4096))
-                            .route(web::post().to_async(routes::logout)),
+                        web::scope("/reports")
+                            .route("", web::get().to_async(reports::list))
+                            .route("/{report_id}", web::get().to_async(reports::by_id))
+                            .route("/create", web::post().to_async(reports::create))
+                            .route("/{report_id}/tasks", web::get().to_async(tasks::list)),
                     ),
             )
     })

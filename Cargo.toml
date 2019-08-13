@@ -14,8 +14,11 @@ serde_derive = "1.0"
 serde = "1.0"
 uuid = { version = "0.7", features = ["v4"] }
 bcrypt = "0.5"
-diesel = { version = "1.4", features = ["postgres", "chrono", "r2d2"] }
+diesel = { version = "1.4", features = ["postgres", "chrono", "r2d2", "serde_json"] }
 dotenv = "0.14"
 futures = "0.1"
-chrono = "0.4"
+chrono = { version = "0.4", features = ["serde"] }
 multihash = "0.8"
+quick-error = "1.2"
+hex = "0.3"
+bytes = "0.4"

@@ -1,4 +1,14 @@
 table! {
+    profiles (id) {
+        id -> Int8,
+        machine_name -> Text,
+        human_name -> Text,
+        module -> Text,
+        config -> Nullable<Jsonb>,
+    }
+}
+
+table! {
     reports (id) {
         id -> Int8,
         user_id -> Int8,
@@ -41,8 +51,7 @@ table! {
     worker_capabilities (id) {
         id -> Int8,
         worker_id -> Int8,
-        kind -> Text,
-        value -> Text,
+        profile_id -> Int8,
     }
 }
 
@@ -53,7 +62,11 @@ table! {
     }
 }
 
+joinable!(tasks -> reports (report_id));
+joinable!(worker_capabilities -> workers (worker_id));
+
 allow_tables_to_appear_in_same_query!(
+    profiles,
     reports,
     tasks,
     tokens,
