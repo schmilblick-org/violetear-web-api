@@ -18,6 +18,7 @@ mod auth;
 mod profiles;
 mod reports;
 mod routes;
+mod tasks;
 
 mod models;
 mod schema;
@@ -97,7 +98,8 @@ fn main() -> std::io::Result<()> {
                         web::scope("/reports")
                             .route("", web::get().to_async(reports::list))
                             .route("/{report_id}", web::get().to_async(reports::by_id))
-                            .route("/create", web::post().to_async(reports::create)),
+                            .route("/create", web::post().to_async(reports::create))
+                            .route("/{report_id}/tasks", web::get().to_async(tasks::list)),
                     ),
             )
     })
