@@ -3,6 +3,9 @@ use chrono::prelude::*;
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 
+use crate::schema::reports;
+use crate::schema::tasks;
+
 #[derive(Queryable)]
 pub struct User {
     pub id: i64,
@@ -126,8 +129,6 @@ impl Profile {
     }
 }
 
-use crate::schema::reports;
-
 #[derive(Identifiable, Queryable, Serialize, Deserialize)]
 pub struct Report {
     pub id: i64,
@@ -198,8 +199,6 @@ impl Report {
     }
 }
 
-use crate::schema::tasks;
-
 #[derive(Queryable, Identifiable, Serialize, Deserialize)]
 pub struct Task {
     id: i64,
@@ -208,6 +207,7 @@ pub struct Task {
     created_when: chrono::DateTime<Utc>,
     completed_when: Option<chrono::DateTime<Utc>>,
     status: String,
+    message: Option<String>,
 }
 
 impl Task {
