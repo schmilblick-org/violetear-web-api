@@ -26,6 +26,7 @@ table! {
         created_when -> Timestamptz,
         completed_when -> Nullable<Timestamptz>,
         status -> Text,
+        message -> Nullable<Text>,
     }
 }
 
