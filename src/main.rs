@@ -99,7 +99,11 @@ fn main() -> std::io::Result<()> {
                             .route("", web::get().to_async(reports::list))
                             .route("/{report_id}", web::get().to_async(reports::by_id))
                             .route("/create", web::post().to_async(reports::create))
-                            .route("/{report_id}/tasks", web::get().to_async(tasks::list)),
+                            .route("/{report_id}/tasks", web::get().to_async(tasks::list))
+                            .route(
+                                "/{report_id}/file",
+                                web::delete().to_async(reports::discard_file),
+                            ),
                     ),
             )
     })
