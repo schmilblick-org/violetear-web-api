@@ -5,7 +5,7 @@ authors = ["lle-bout"]
 edition = "2018"
 
 [dependencies]
-actix-web = "1.0"
+actix-web = "2.0"
 actix-cors = "0.1.0"
 env_logger = "0.6"
 clap = "2.33"
